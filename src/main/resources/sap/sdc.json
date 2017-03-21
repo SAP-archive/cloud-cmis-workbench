@@ -1,0 +1,82 @@
+[
+	{
+		"name": "Local Server",
+		"url": "http://localhost:8080"
+	},
+	{
+		"name": "mdocs.sap.com",
+		"url": "https://mdocs.sap.com"
+	},
+	{
+		"name": "Landscape EU1",
+		"url": "https://{provider}-{consumer}.hana.ondemand.com",
+		"providers": 
+			[
+				{
+				    "name": "Productive Provider",
+					"alias": "smd",
+					"consumers": [ ]
+				}
+			]
+	},
+	{
+		"name": "Landscape US1",
+		"url": "https://{provider}-{consumer}.us1.hana.ondemand.com",
+		"providers": 
+			[
+				{
+				    "name": "Productive Provider",
+					"alias": "smd",
+					"consumers": [ ]
+				}
+			]
+	},
+	{
+		"name": "Landscape US2",
+		"url": "https://{provider}-{consumer}.us2.hana.ondemand.com",
+		"providers": 
+			[
+				{
+				    "name": "Productive Provider",
+					"alias": "smd",
+					"consumers": [ ]
+				}
+			]
+	},
+	{
+		"name": "Landscape AP1",
+		"url": "https://{provider}-{consumer}.ap1.hana.ondemand.com",
+		"providers": 
+			[
+				{
+				    "name": "Productive Provider",
+					"alias": "smd",
+					"consumers": [ ]
+				}
+			]
+	},
+	{
+		"name": "Landscape JP1",
+		"url": "https://{provider}-{consumer}.jp1.hana.ondemand.com",
+		"providers": 
+			[
+				{
+				    "name": "Productive Provider",
+					"alias": "smd",
+					"consumers": [ ]
+				}
+			]
+	},
+	{
+		"name": "Landscape CN1",
+		"url": "https://{provider}-{consumer}.cn1.hana.ondemand.com",
+		"providers": 
+			[
+				{
+				    "name": "Productive Provider",
+					"alias": "smd",
+					"consumers": [ ]
+				}
+			]
+	}
+]

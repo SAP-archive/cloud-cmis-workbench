@@ -1,14 +1,15 @@
-CMIS Workbench with login tab for SAP Mobile Documents
-======================================================
+CMIS Workbench with login tab for SAP Mobile Documents and SAP Document Center
+==============================================================================
 
-This project adds a login the tab to the [Apache Chemistry OpenCMIS][1] 
-[CMIS Workbench][2] that lets you connect to a [SAP Mobile Documents][3] runtime server.
+This project adds a login tab to the [Apache Chemistry OpenCMIS][1] 
+[CMIS Workbench][2] that lets you connect to a SAP Mobile Documents server
+or [SAP Document Center][3].
 
 
 Copyright and license
 ---------------------
 
-Copyright 2013 SAP AG
+Copyright 2013-2017, SAP SE
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this work except in compliance with the License.
@@ -28,6 +29,6 @@ See the NOTICE and DEPENDENCIES files for all additional license informations.
 
 [1]: https://chemistry.apache.org
 [2]: https://chemistry.apache.org/java/developing/tools/dev-tools-workbench.html
-[3]: http://scn.sap.com/community/mobile-documents
+[3]: https://www.sap.com/product/content-collaboration/mobile-file-sharing.html
 [4]: https://www.apache.org/licenses/LICENSE-2.0.html
 
