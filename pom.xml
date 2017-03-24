@@ -21,7 +21,7 @@
 
 	<groupId>com.sap.sdc</groupId>
 	<artifactId>cmis-workbench-sdc-addon</artifactId>
-	<version>1.0.0-02</version>
+	<version>1.0.0-03</version>
 	<packaging>jar</packaging>
 
 	<properties>

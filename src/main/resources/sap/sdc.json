@@ -1,13 +1,5 @@
 [
 	{
-		"name": "Local Server",
-		"url": "http://localhost:8080"
-	},
-	{
-		"name": "mdocs.sap.com",
-		"url": "https://mdocs.sap.com"
-	},
-	{
 		"name": "Landscape EU1",
 		"url": "https://{provider}-{consumer}.hana.ondemand.com",
 		"providers": 

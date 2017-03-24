@@ -26,6 +26,8 @@ import java.awt.event.ItemListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.FileNotFoundException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -49,6 +51,7 @@ import org.apache.chemistry.opencmis.client.api.Session;
 import org.apache.chemistry.opencmis.commons.data.CmisExtensionElement;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
 import org.apache.chemistry.opencmis.workbench.AbstractSpringLoginTab;
+import org.apache.chemistry.opencmis.workbench.ClientHelper;
 import org.apache.chemistry.opencmis.workbench.WorkbenchScale;
 import org.apache.chemistry.opencmis.workbench.model.ClientSession;
 
@@ -121,6 +124,14 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 
 		Color color = UIManager.getColor("Panel.background");
 		urlField.setBackground(new Color(color.getRGB()));
+		urlField.addFocusListener(new FocusAdapter() {
+			@Override
+			public void focusLost(FocusEvent e) {
+				if (landscapeBox.getSelectedItem() == CUSTOM_LANDSCAPE) {
+					urlField.setText(buildURL());
+				}
+			}
+		});
 
 		landscapeBox = createLandscapeBox(this, "Landscape:");
 		providerBox = createProviderBox(this, "Provider:");
@@ -198,6 +209,7 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 			consumerBox.setSelectedItem(configConsumer);
 		}
 
+		urlField.setText("<host>");
 		urlField.setText(buildURL());
 	}
 
@@ -235,8 +247,8 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 		JComboBox<Landscape> comboBox = new JComboBox<Landscape>(landscapes);
 		comboBox.setMaximumRowCount(landscapes.length);
 
-		String landscapeStr = System.getProperty(SYSPROP_LANDSCAPE, landscapes.length > 1 ? "1" : "0");
-		int landscape = landscapes.length > 1 ? 1 : 0;
+        String landscapeStr = System.getProperty(SYSPROP_LANDSCAPE, "0");
+        int landscape = 0;
 		try {
 			landscape = Integer.parseInt(landscapeStr);
 		} catch (NumberFormatException nfe) {
@@ -436,7 +448,32 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 		Landscape landscape = (Landscape) landscapeBox.getSelectedItem();
 
 		if (landscape == CUSTOM_LANDSCAPE) {
-			return urlField.getText();
+			String urlText = urlField.getText();
+			if (urlText.indexOf('/') == -1) {
+				// only a hostname
+				urlText = "https://" + urlText + buildPath();
+			}
+
+			URL url;
+			try {
+				url = new URL(urlText);
+
+				String protocol = url.getProtocol().toLowerCase(Locale.ENGLISH);
+				if (!"http".equals(protocol) && !"https".equals(protocol)) {
+					throw new MalformedURLException("not a HTTP protocol: " + url.getProtocol());
+				}
+
+				if (url.getPath().isEmpty() || url.getPath().equals("/")) {
+					// path is missing -> add it
+					url = new URL(url, buildPath());
+				}
+
+				return url.toExternalForm();
+			} catch (MalformedURLException e) {
+				ClientHelper.showError(null, e);
+			}
+
+			return urlText;
 		}
 
 		StringBuilder sb = new StringBuilder(128);
@@ -452,20 +489,21 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 		}
 
 		sb.append(landscapeUrl);
-
-		if (authenticationOAuthButton.isSelected()) {
-			sb.append("/mcm/oauth");
-		} else {
-			sb.append("/mcm/b/");
-
-			if (bindingBrowserButton.isSelected()) {
-				sb.append("json");
-			} else {
-				sb.append("atom");
-			}
-		}
+		sb.append(buildPath());
 
 		return sb.toString();
+	}
+
+	private String buildPath() {
+		if (authenticationOAuthButton.isSelected()) {
+			return "/mcm/oauth";
+		} else {
+			if (bindingBrowserButton.isSelected()) {
+				return "/mcm/b/json";
+			} else {
+				return "/mcm/b/atom";
+			}
+		}
 	}
 
 	@Override

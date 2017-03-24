@@ -206,7 +206,7 @@ public class ConsoleRunner extends AbstractRunner {
 
 	private void printUsage() {
 		System.out.println("Usage: runtck"
-				+ " [-p] [-v] [-report=<file>] [-report-format=<format>] <path-to-session-parameters-file> [test-group]\n");
+				+ " [-p] [-u] [-report=<file>] [-report-format=<format>] <path-to-session-parameters-file> [test-group]\n");
 		System.out.println("Parameters:\n");
 		System.out.println(" -u                                 ask for username");
 		System.out.println(" -p                                 ask for password");
@@ -216,7 +216,6 @@ public class ConsoleRunner extends AbstractRunner {
 		System.out.println("                                       html  - HTML report");
 		System.out.println("                                       xml   - XML report");
 		System.out.println("                                       json  - JSON report");
-		;
 		System.out.println(" <path-to-session-parameters-file>  "
 				+ "path of the properties file that contains the session parameters");
 		System.out.println(" [test-group]                       TCK test group");
