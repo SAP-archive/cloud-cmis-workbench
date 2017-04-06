@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if [ -z "$JAVA_HOME" ]; then
   j=$(which java 2>/dev/null)

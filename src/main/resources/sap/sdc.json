@@ -36,6 +36,18 @@
 			]
 	},
 	{
+		"name": "Landscape US3",
+		"url": "https://{provider}-{consumer}.us3.hana.ondemand.com",
+		"providers": 
+			[
+				{
+				    "name": "Productive Provider",
+					"alias": "smd",
+					"consumers": [ ]
+				}
+			]
+	},
+	{
 		"name": "Landscape AP1",
 		"url": "https://{provider}-{consumer}.ap1.hana.ondemand.com",
 		"providers": 
