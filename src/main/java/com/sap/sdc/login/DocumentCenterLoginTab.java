@@ -18,7 +18,11 @@ package com.sap.sdc.login;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Desktop;
+import java.awt.Desktop.Action;
 import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.ItemEvent;
@@ -26,6 +30,9 @@ import java.awt.event.ItemListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.FileNotFoundException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
@@ -36,6 +43,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListCellRenderer;
+import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
@@ -45,11 +53,18 @@ import javax.swing.JPasswordField;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 import javax.swing.SpringLayout;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
+import org.apache.chemistry.opencmis.client.SessionParameterMap;
 import org.apache.chemistry.opencmis.client.api.Session;
+import org.apache.chemistry.opencmis.client.bindings.impl.ClientVersion;
 import org.apache.chemistry.opencmis.commons.data.CmisExtensionElement;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
+import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
+import org.apache.chemistry.opencmis.commons.impl.IOUtils;
+import org.apache.chemistry.opencmis.commons.impl.json.JSONObject;
+import org.apache.chemistry.opencmis.commons.impl.json.parser.JSONParser;
 import org.apache.chemistry.opencmis.workbench.AbstractSpringLoginTab;
 import org.apache.chemistry.opencmis.workbench.ClientHelper;
 import org.apache.chemistry.opencmis.workbench.WorkbenchScale;
@@ -91,6 +106,8 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 	private JPasswordField passwordField;
 	private JRadioButton authenticationBasicButton;
 	private JRadioButton authenticationOAuthButton;
+	private JRadioButton authenticationOAuthCodeButton;
+	private JButton authenticationGetOAuthCodeButton;
 
 	private JTextField usernameField;
 
@@ -247,8 +264,8 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 		JComboBox<Landscape> comboBox = new JComboBox<Landscape>(landscapes);
 		comboBox.setMaximumRowCount(landscapes.length);
 
-        String landscapeStr = System.getProperty(SYSPROP_LANDSCAPE, "0");
-        int landscape = 0;
+		String landscapeStr = System.getProperty(SYSPROP_LANDSCAPE, "0");
+		int landscape = 0;
 		try {
 			landscape = Integer.parseInt(landscapeStr);
 		} catch (NumberFormatException nfe) {
@@ -429,14 +446,85 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 		boolean standard = (System.getProperty(SYSPROP_AUTHENTICATION, "standard").toLowerCase(Locale.ENGLISH)
 				.equals("standard"));
 		boolean oauth = (System.getProperty(SYSPROP_AUTHENTICATION, "").toLowerCase(Locale.ENGLISH).equals("oauth"));
+		boolean oauthCode = (System.getProperty(SYSPROP_AUTHENTICATION, "").toLowerCase(Locale.ENGLISH).equals("code"));
 		authenticationBasicButton = new JRadioButton("Basic Auth", standard);
 		authenticationOAuthButton = new JRadioButton("OAuth 2.0 (Bearer Token)", oauth);
+		authenticationOAuthCodeButton = new JRadioButton("OAuth 2.0 (Code)", oauthCode);
+		authenticationGetOAuthCodeButton = new JButton("Get OAuth Code");
 		ButtonGroup authenticationGroup = new ButtonGroup();
 		authenticationGroup.add(authenticationBasicButton);
 		authenticationGroup.add(authenticationOAuthButton);
+		authenticationGroup.add(authenticationOAuthCodeButton);
 		authenticationContainer.add(authenticationBasicButton);
 		authenticationContainer.add(Box.createRigidArea(WorkbenchScale.scaleDimension(new Dimension(10, 0))));
 		authenticationContainer.add(authenticationOAuthButton);
+		authenticationContainer.add(Box.createRigidArea(WorkbenchScale.scaleDimension(new Dimension(10, 0))));
+		authenticationContainer.add(authenticationOAuthCodeButton);
+		if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Action.BROWSE)) {
+			authenticationContainer.add(Box.createRigidArea(WorkbenchScale.scaleDimension(new Dimension(10, 0))));
+			authenticationContainer.add(authenticationGetOAuthCodeButton);
+
+			authenticationGetOAuthCodeButton.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					SwingUtilities.invokeLater(new Runnable() {
+						@Override
+						public void run() {
+							try {
+								// fetch auth infos
+								URL authInfoUrl = buildAuthInfoUrl();
+								JSONObject oauthConfig = getOAuthConfigutation(authInfoUrl);
+								if (oauthConfig == null) {
+									throw new CmisConnectionException(
+											"No valid OAuth configuration found at " + authInfoUrl.toString() + " .");
+								}
+
+								// build URL
+								URL authorizationUrl = buildAuthorizationUrl(oauthConfig);
+								if (authorizationUrl == null) {
+									throw new CmisConnectionException(
+											"No valid authorization URL found at " + authInfoUrl.toString() + " .");
+								}
+
+								// open web browser
+								Desktop.getDesktop().browse(authorizationUrl.toURI());
+							} catch (Exception ex) {
+								ClientHelper.showError(DocumentCenterLoginTab.this, ex);
+							}
+						}
+					});
+
+					// prepare for code
+					authenticationOAuthCodeButton.setSelected(true);
+					usernameField.setText("");
+					usernameField.requestFocus();
+				}
+			});
+		}
+
+		authenticationBasicButton.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				if (e.getStateChange() == ItemEvent.SELECTED) {
+					usernameField.setEnabled(true);
+					passwordField.setEnabled(true);
+				}
+			}
+		});
+
+		ItemListener EnableBothListener = new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				if (e.getStateChange() == ItemEvent.SELECTED) {
+					usernameField.setEnabled(true);
+					passwordField.setEnabled(false);
+				}
+			}
+		};
+
+		authenticationOAuthButton.addItemListener(EnableBothListener);
+		authenticationOAuthCodeButton.addItemListener(EnableBothListener);
+
 		JLabel authenticatioLabel = new JLabel("Authentication:", JLabel.TRAILING);
 
 		pane.add(authenticatioLabel);
@@ -495,7 +583,7 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 	}
 
 	private String buildPath() {
-		if (authenticationOAuthButton.isSelected()) {
+		if (authenticationOAuthButton.isSelected() || authenticationOAuthCodeButton.isSelected()) {
 			return "/mcm/oauth";
 		} else {
 			if (bindingBrowserButton.isSelected()) {
@@ -526,6 +614,9 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 		ClientSession.Authentication authentication = ClientSession.Authentication.STANDARD;
 		if (authenticationOAuthButton.isSelected()) {
 			authentication = ClientSession.Authentication.OAUTH_BEARER;
+		}
+		if (authenticationOAuthCodeButton.isSelected()) {
+			authentication = ClientSession.Authentication.NONE;
 		}
 
 		Locale locale = null;
@@ -561,14 +652,152 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 			}
 		}
 
-		Map<String, String> parameters = ClientSession.createSessionParameters(url, binding, username, password,
+		SessionParameterMap parameters = ClientSession.createSessionParameters(url, binding, username, password,
 				authentication, true, false, true, HEADER_CSRF, locale, connectTimeout, readTimeout);
+
+		if (authenticationOAuthCodeButton.isSelected()) {
+			setOAuthParameters(parameters);
+		}
 
 		if (maxChildrenField.getValue() instanceof Number) {
 			parameters.put(ClientSession.MAX_FOLDER_CHILDREN, ((Number) maxChildrenField.getValue()).toString());
 		}
 
 		return parameters;
+	}
+
+	private void setOAuthParameters(SessionParameterMap parameters) {
+		URL authInfoUrl = buildAuthInfoUrl();
+		JSONObject oauthConfig = getOAuthConfigutation(authInfoUrl);
+
+		// check config
+		if (oauthConfig == null) {
+			throw new CmisConnectionException("No valid OAuth configuratin found at " + authInfoUrl.toString() + " .");
+		}
+
+		// get values
+		String tokenEntpoint = getStringFromJSON(oauthConfig, "tokenURL");
+		String clientId = getStringFromJSON(oauthConfig, "clientId");
+		String clientSecret = getStringFromJSON(oauthConfig, "clientSecret");
+		String redirectUrl = getStringFromJSON(oauthConfig, "redirectURL");
+
+		// check code
+		String code = usernameField.getText().trim();
+		if (code.length() == 0) {
+			String hint = "";
+			URL authorizationUrl = buildAuthorizationUrl(oauthConfig);
+			if (authorizationUrl != null) {
+				hint = " Request an OAuth code at " + authorizationUrl.toString() + " .";
+			}
+
+			throw new CmisConnectionException("No code provided." + hint);
+		}
+
+		// turn OAuth on
+		parameters.setOAuthAuthentication(tokenEntpoint, clientId, clientSecret, code, redirectUrl);
+	}
+
+	private URL buildAuthInfoUrl() {
+		try {
+			URL cmisUrl = new URL(buildURL());
+			return new URL(cmisUrl.getProtocol(), cmisUrl.getHost(), "/mcm/public/rest/v1/settings/auth");
+		} catch (Exception e) {
+			throw new CmisConnectionException("Could not build authentication info URL: " + e.toString(), e);
+		}
+	}
+
+	private URL buildAuthorizationUrl(JSONObject oauthConfig) {
+		try {
+			String authUrl = getStringFromJSON(oauthConfig, "authURL");
+			String clientId = getStringFromJSON(oauthConfig, "clientId");
+			String redirectUrl = getStringFromJSON(oauthConfig, "redirectURL");
+
+			if (authUrl == null || clientId == null || redirectUrl == null) {
+				return null;
+			}
+
+			URL url = new URL(authUrl + "?client_id=" + IOUtils.encodeURL(clientId)
+					+ "&response_type=code&scope=cmis_all&redirect_uri=" + IOUtils.encodeURL(redirectUrl));
+
+			return url;
+		} catch (Exception e) {
+			throw new CmisConnectionException("Could not build authorization URL: " + e.toString(), e);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private JSONObject getOAuthConfigutation(URL authInfoUrl) {
+		Reader reader = null;
+
+		try {
+			// get the OAuth config from server
+			HttpURLConnection conn = (HttpURLConnection) authInfoUrl.openConnection();
+			conn.setRequestMethod("GET");
+			conn.setDoInput(true);
+			conn.setDoOutput(false);
+			conn.setAllowUserInteraction(false);
+			conn.setUseCaches(false);
+			conn.setRequestProperty("User-Agent", ClientVersion.OPENCMIS_USER_AGENT);
+			conn.setConnectTimeout(60000);
+			conn.setReadTimeout(30000);
+
+			// connect
+			conn.connect();
+			int respCode = conn.getResponseCode();
+			if (respCode != 200) {
+				throw new CmisConnectionException("Could not load authentiction data from " + authInfoUrl.toString()
+						+ " . Response code: " + respCode);
+			}
+
+			// parse response
+			reader = new InputStreamReader(conn.getInputStream(), "UTF-8");
+			JSONParser parser = new JSONParser();
+			Object obj = parser.parse(reader);
+
+			if (obj instanceof List) {
+				for (Object authEntry : (List<Object>) obj) {
+					if (!(authEntry instanceof JSONObject)) {
+						continue;
+					}
+
+					Object authList = ((JSONObject) authEntry).get("authentication");
+					if (!(authList instanceof List)) {
+						continue;
+					}
+
+					for (Object authType : (List<Object>) authList) {
+						if (!(authType instanceof JSONObject)) {
+							continue;
+						}
+
+						Object type = ((JSONObject) authType).get("type");
+						if (!(type instanceof String)) {
+							continue;
+						}
+						if (!type.toString().equals("oauth")) {
+							continue;
+						}
+
+						return (JSONObject) authType;
+					}
+				}
+			}
+
+			return null;
+		} catch (Exception e) {
+			throw new CmisConnectionException(
+					"Authentiction data from " + authInfoUrl.toString() + " is invalid: " + e.toString(), e);
+		} finally {
+			IOUtils.closeQuietly(reader);
+		}
+	}
+
+	private String getStringFromJSON(JSONObject json, String name) {
+		if (json.containsKey(name)) {
+			return json.get(name).toString();
+		}
+
+		return null;
 	}
 
 	@Override
@@ -578,7 +807,8 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 		List<CmisExtensionElement> extensions = session.getRepositoryInfo().getExtensions();
 		if (extensions != null) {
 			for (CmisExtensionElement ext : extensions) {
-				if ("myDocuments".equals(ext.getName()) || "sharing".equals(ext.getName())) {
+				if ("myDocuments".equals(ext.getName()) || "sharing".equals(ext.getName())
+						|| "favorites".equals(ext.getName()) || "recycleBinHome".equals(ext.getName())) {
 					if (ext.getValue() != null && ext.getValue().length() > 0) {
 						homeFolderId = ext.getValue();
 						break;

@@ -60,6 +60,18 @@
 			]
 	},
 	{
+		"name": "Landscape AP2",
+		"url": "https://{provider}-{consumer}.ap2.hana.ondemand.com",
+		"providers": 
+			[
+				{
+				    "name": "Productive Provider",
+					"alias": "smd",
+					"consumers": [ ]
+				}
+			]
+	},
+	{
 		"name": "Landscape JP1",
 		"url": "https://{provider}-{consumer}.jp1.hana.ondemand.com",
 		"providers": 
