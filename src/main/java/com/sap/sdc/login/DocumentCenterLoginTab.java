@@ -158,7 +158,8 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 			@Override
 			public void itemStateChanged(ItemEvent e) {
 				if (e.getStateChange() == ItemEvent.SELECTED) {
-					if (authenticationOAuthButton.isSelected() && bindingAtomButton.isSelected()) {
+					if ((authenticationOAuthButton.isSelected() || authenticationGetOAuthCodeButton.isSelected())
+							&& bindingAtomButton.isSelected()) {
 						bindingBrowserButton.setSelected(true);
 					}
 					urlField.setText(buildURL());
@@ -184,6 +185,7 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 
 		authenticationBasicButton.addItemListener(itemListener);
 		authenticationOAuthButton.addItemListener(itemListener);
+		authenticationOAuthCodeButton.addItemListener(itemListener);
 
 		languageField = createTextField(this, "Language:", "<html>Enter a <b>ISO 639 language</b> code.<br>"
 				+ "The language code is sent to the server but it may not be used by the server.");
@@ -451,6 +453,9 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 		authenticationOAuthButton = new JRadioButton("OAuth 2.0 (Bearer Token)", oauth);
 		authenticationOAuthCodeButton = new JRadioButton("OAuth 2.0 (Code)", oauthCode);
 		authenticationGetOAuthCodeButton = new JButton("Get OAuth Code");
+		authenticationGetOAuthCodeButton
+				.setToolTipText("<html>If OAuth is configured, the login page is opened in a web browser."
+						+ "<br>Follow the login steps until you see the QR code. Then copy the OAuth code from the URL and enter it into the username field.");
 		ButtonGroup authenticationGroup = new ButtonGroup();
 		authenticationGroup.add(authenticationBasicButton);
 		authenticationGroup.add(authenticationOAuthButton);
@@ -745,7 +750,7 @@ public class DocumentCenterLoginTab extends AbstractSpringLoginTab {
 			conn.connect();
 			int respCode = conn.getResponseCode();
 			if (respCode != 200) {
-				throw new CmisConnectionException("Could not load authentiction data from " + authInfoUrl.toString()
+				throw new CmisConnectionException("Could not load authentication data from " + authInfoUrl.toString()
 						+ " . Response code: " + respCode);
 			}
 
